@@ -3,6 +3,7 @@ databases:
     databaseName: agrivigil
     user: agrivigil
     plan: free
+    region: frankfurt
 
 services:
   - type: web
