@@ -59,11 +59,7 @@ async function request(path, { method = 'GET', body, isForm = false, retry = tru
   const token = getAccessToken();
   const isPublicAuthPath =
     path === '/auth/login/' ||
-    path === '/auth/register/' ||
-    path === '/auth/verify-otp/' ||
-    path === '/auth/resend-otp/' ||
-    path === '/auth/forgot-password/' ||
-    path === '/auth/reset-password/';
+    path === '/auth/register/';
 
   if (token && !isPublicAuthPath) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -76,7 +72,7 @@ async function request(path, { method = 'GET', body, isForm = false, retry = tru
     body: isForm ? body : body ? JSON.stringify(body) : undefined,
   });
 
-  if (res.status === 401 && retry && getRefreshToken() && path !== '/auth/login/' && path !== '/auth/register/' && path !== '/auth/verify-otp/') {
+  if (res.status === 401 && retry && getRefreshToken() && path !== '/auth/login/' && path !== '/auth/register/') {
     await refreshAccessToken();
     return request(path, { method, body, isForm, retry: false });
   }
@@ -157,36 +153,13 @@ const auth = {
 
   async register({ email, password, full_name }) {
     const body = { email, password, full_name };
-    // En développement, demander au backend de renvoyer le code OTP pour démo
-    if (import.meta.env.DEV || import.meta.env.VITE_DEBUG_OTP === 'true') {
-      body.debug = true;
-    }
-    return request('/auth/register/', { method: 'POST', body });
-  },
-
-  async verifyOtp({ email, otpCode }) {
-    const data = await request('/auth/verify-otp/', { method: 'POST', body: { email, otp_code: otpCode } });
+    const data = await request('/auth/register/', { method: 'POST', body });
     setTokens(data);
-    return data;
-  },
-
-  async resendOtp(email) {
-    return request('/auth/resend-otp/', { method: 'POST', body: { email } });
+    return data.user;
   },
 
   setToken(access_token) {
     setTokens({ access_token });
-  },
-
-  async resetPasswordRequest(email) {
-    return request('/auth/forgot-password/', { method: 'POST', body: { email } });
-  },
-
-  async resetPassword({ resetToken, newPassword, email }) {
-    return request('/auth/reset-password/', {
-      method: 'POST',
-      body: { email, reset_token: resetToken, new_password: newPassword },
-    });
   },
 
   logout(redirectUrl) {

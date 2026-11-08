@@ -29,25 +29,3 @@ services:
         fromDatabase:
           name: agrivigil-ai-db
           property: connectionString
-      - key: EMAIL_HOST
-        value: smtp.resend.com
-      - key: EMAIL_PORT
-        value: "465"
-      - key: EMAIL_HOST_USER
-        value: resend
-      - key: EMAIL_USE_SSL
-        value: "True"
-      - key: EMAIL_HOST_PASSWORD
-        sync: false
-      - key: DEFAULT_FROM_EMAIL
-        sync: false
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: OPENWEATHER_API_KEY
-        sync: false
-      - key: CLOUDINARY_CLOUD_NAME
-        sync: false
-      - key: CLOUDINARY_API_KEY
-        sync: false
-      - key: CLOUDINARY_API_SECRET
-        sync: false

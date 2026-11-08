@@ -61,18 +61,11 @@ services doivent être déployés.
    d'inactivité et la base gratuite est temporaire (30 jours). Pour une
    utilisation durable, choisis une base PostgreSQL payante et configure des
    sauvegardes.
-2. Pour recevoir les codes d'inscription et de réinitialisation, crée un
-   compte [Resend](https://resend.com/), vérifie un domaine expéditeur et
-   configure dans **Render → agrivigil-ai-api → Environment** :
-   `EMAIL_HOST_PASSWORD` (clé SMTP Resend) et `DEFAULT_FROM_EMAIL` (adresse
-   vérifiée, par exemple `AgriVigil AI <noreply@ton-domaine.com>`). Ne partage
-   jamais ces valeurs dans le dépôt. Sans ces deux variables, l'inscription
-   et la réinitialisation de mot de passe ne peuvent pas envoyer de code.
-3. Après le premier déploiement Render, copie l'URL publique de l'API, par
+2. Après le premier déploiement Render, copie l'URL publique de l'API, par
    exemple `https://agrivigil-ai-api.onrender.com`. Dans GitHub, ouvre
    **Settings → Secrets and variables → Actions → Variables**, ajoute
    `VITE_API_BASE_URL` avec cette URL (sans `/api`).
-4. Dans GitHub, ouvre **Settings → Pages**, choisis **GitHub Actions** comme
+3. Dans GitHub, ouvre **Settings → Pages**, choisis **GitHub Actions** comme
    source, puis lance le workflow **Deploy frontend to GitHub Pages** depuis
    l'onglet **Actions**. Les prochaines modifications du frontend publiées
    sur `main` déclencheront automatiquement le déploiement.
@@ -88,6 +81,9 @@ activer leurs fonctions : `GEMINI_API_KEY` (diagnostic IA),
 `OPENWEATHER_API_KEY` (météo), et les identifiants
 `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
 pour conserver les images de scans malgré les redémarrages du serveur.
+L'inscription crée directement un compte actif sans email. La récupération
+du mot de passe est désactivée : les utilisateurs doivent conserver leur mot
+de passe jusqu'à la configuration future d'un service d'email.
 
 ### Lancement officiel pour le jury (une seule commande)
 
@@ -147,15 +143,11 @@ L'appli tourne sur http://localhost:5173/.
 
 | Méthode | Endpoint                          | Description                                  |
 |---------|------------------------------------|-----------------------------------------------|
-| POST    | `/api/auth/register/`              | Inscription (déclenche un code OTP)          |
-| POST    | `/api/auth/verify-otp/`            | Valide le code, retourne les tokens JWT      |
-| POST    | `/api/auth/resend-otp/`            | Renvoie un code                              |
+| POST    | `/api/auth/register/`              | Inscription immédiate, retourne les tokens JWT |
 | POST    | `/api/auth/login/`                 | Connexion email/mot de passe                 |
 | POST    | `/api/auth/token/refresh/`         | Rafraîchit le token d'accès                  |
 | GET     | `/api/auth/me/`                    | Profil de l'utilisateur connecté             |
 | POST    | `/api/auth/logout/`                | Déconnexion                                   |
-| POST    | `/api/auth/forgot-password/`       | Demande de réinitialisation                  |
-| POST    | `/api/auth/reset-password/`        | Réinitialisation du mot de passe             |
 | GET/POST| `/api/scans/`                      | Historique des scans / créer un scan brut    |
 | POST    | `/api/scans/analyze/`              | Envoie une image → diagnostic IA complet     |
 | GET/POST| `/api/alerts/`                     | Alertes sanitaires communautaires            |
@@ -177,9 +169,8 @@ Channels plus tard sans changer l'interface des composants.
 
 - SQLite en développement local ; le Blueprint Render utilise PostgreSQL
   en production.
-- En développement, les codes OTP sont affichés dans la console Django.
-  En production, un SMTP Resend vérifié est requis pour envoyer les codes
-  d'inscription et de réinitialisation (voir la configuration de déploiement).
+- La vérification d'adresse email et la récupération du mot de passe sont
+  désactivées pour le moment ; les comptes sont activés dès leur création.
 - La connexion Google (bouton présent dans l'UI) n'est pas branchée — elle
   affiche un message clair plutôt que de planter.
 - Le diagnostic IA (Gemini) et la météo (OpenWeatherMap) nécessitent tes

@@ -6,16 +6,12 @@ import { Leaf, Loader2, Mail, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Link, useNavigate } from 'react-router-dom';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Link } from 'react-router-dom';
 
 export default function Register() {
-  const navigate = useNavigate();
-  const [step, setStep] = useState('register'); // register | otp
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -25,32 +21,12 @@ export default function Register() {
     setError('');
     setLoading(true);
     try {
-      const res = await db.auth.register({ email, password });
-      if (res && res.debug_otp_code) {
-        setOtp(res.debug_otp_code);
-      }
-      setStep('otp');
+      await db.auth.register({ email, password });
+      window.location.assign(`${import.meta.env.BASE_URL}#/`);
     } catch (err) {
       setError(err.message || 'Erreur lors de l\'inscription');
     }
     setLoading(false);
-  };
-
-  const handleOtp = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      const { access_token } = await db.auth.verifyOtp({ email, otpCode: otp });
-      db.auth.setToken(access_token);
-      navigate('/');
-    } catch (err) {
-      setError(err.message || 'Code invalide');
-      setLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    await db.auth.resendOtp(email);
   };
 
   return (
@@ -64,8 +40,7 @@ export default function Register() {
           <p className="text-sm text-[#8A9A91] font-body">Rejoignez la communauté AgrivigilAI</p>
         </div>
 
-        {step === 'register' ? (
-          <form onSubmit={handleRegister} className="space-y-4">
+        <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-1.5">
               <Label className="text-sm font-body font-medium text-[#10221A]">Email</Label>
               <div className="relative">
@@ -91,24 +66,7 @@ export default function Register() {
             <Button type="submit" disabled={loading} className="w-full h-14 text-base font-body font-semibold bg-[#12523A] hover:bg-[#0B3D2A] text-white rounded-2xl">
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Créer mon compte'}
             </Button>
-          </form>
-        ) : (
-          <div className="space-y-4 text-center">
-            <p className="text-sm text-[#10221A] font-body">Un code a été envoyé à <strong>{email}</strong></p>
-            <div className="flex justify-center">
-              <InputOTP value={otp} onChange={setOtp} maxLength={6}>
-                <InputOTPGroup>
-                  {[0,1,2,3,4,5].map(i => <InputOTPSlot key={i} index={i} className="w-11 h-12 text-lg" />)}
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
-            {error && <p className="text-sm text-[#D6473B] font-body">{error}</p>}
-            <Button onClick={handleOtp} disabled={loading || otp.length < 6} className="w-full h-14 text-base font-body font-semibold bg-[#12523A] hover:bg-[#0B3D2A] text-white rounded-2xl">
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Vérifier'}
-            </Button>
-            <button onClick={handleResend} className="text-sm text-[#B4740E] font-body hover:underline">Renvoyer le code</button>
-          </div>
-        )}
+        </form>
 
         <div className="mt-6 text-center">
           <p className="text-sm text-[#8A9A91] font-body">

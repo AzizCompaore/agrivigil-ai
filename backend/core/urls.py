@@ -6,14 +6,10 @@ from . import views
 urlpatterns = [
     # Auth
     path("auth/register/", views.RegisterView.as_view(), name="register"),
-    path("auth/verify-otp/", views.VerifyOtpView.as_view(), name="verify-otp"),
-    path("auth/resend-otp/", views.ResendOtpView.as_view(), name="resend-otp"),
     path("auth/login/", views.LoginView.as_view(), name="login"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("auth/me/", views.MeView.as_view(), name="me"),
     path("auth/logout/", views.LogoutView.as_view(), name="logout"),
-    path("auth/forgot-password/", views.ForgotPasswordView.as_view(), name="forgot-password"),
-    path("auth/reset-password/", views.ResetPasswordView.as_view(), name="reset-password"),
 
     # Synthèse vocale
     path("synthesize-dioula/", views.SynthesizeDioulaView.as_view(), name="synthesize-dioula"),

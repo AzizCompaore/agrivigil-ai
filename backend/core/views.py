@@ -1,12 +1,9 @@
 import logging
-import random
-from datetime import date, timedelta
+from datetime import date
 
 from django.conf import settings
 from django.contrib.auth import authenticate
-from django.core.mail import send_mail
 from django.db import transaction
-from django.utils import timezone
 
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
@@ -17,41 +14,20 @@ from .ai_diagnosis import diagnose_crop_image
 from .crop_advice import get_crop_advice_enriched
 from .expert_engine import generate_chatbot_reply, generate_expert_reply
 from .soil_diagnosis import analyze_soil_image
-from .models import CropScan, CropScanTracking, Expert, ExpertMessage, FertilizerCalculation, HealthAlert, OneTimeCode, User
+from .models import CropScan, CropScanTracking, Expert, ExpertMessage, FertilizerCalculation, HealthAlert, User
 from .serializers import (
     CropScanSerializer, CropScanTrackingSerializer, ExpertMessageSerializer, ExpertSerializer,
-    FertilizerCalculationSerializer, ForgotPasswordSerializer, HealthAlertSerializer,
-    LoginSerializer, RegisterSerializer, ResetPasswordSerializer, UserSerializer,
-    VerifyOtpSerializer,
+    FertilizerCalculationSerializer, HealthAlertSerializer, LoginSerializer, RegisterSerializer,
+    UserSerializer,
 )
 from .utils import TTSServiceError, calculate_fertilizer_detailed, haversine_km, synthesize_text_to_speech
 from .weather import IVORIAN_CITIES, get_weather
 
 logger = logging.getLogger(__name__)
 
-OTP_VALIDITY_MINUTES = 15
-
-
 def _tokens_for(user):
     refresh = RefreshToken.for_user(user)
     return {"access_token": str(refresh.access_token), "refresh_token": str(refresh)}
-
-
-def _generate_otp(email, purpose):
-    code = f"{random.randint(0, 999999):06d}"
-    OneTimeCode.objects.create(email=email, code=code, purpose=purpose)
-    if settings.DEBUG:
-        print(f"[OTP DEMO] {purpose} pour {email} : {code} (valide {OTP_VALIDITY_MINUTES} min)")
-    else:
-        action = "la création de votre compte" if purpose == "register" else "la réinitialisation de votre mot de passe"
-        send_mail(
-            "Votre code de vérification AgriVigil AI",
-            f"Utilisez le code {code} pour {action}. Il est valide pendant {OTP_VALIDITY_MINUTES} minutes.",
-            settings.DEFAULT_FROM_EMAIL,
-            [email],
-            fail_silently=False,
-        )
-    return code
 
 
 # ---------------------------------------------------------------------------
@@ -67,54 +43,11 @@ class RegisterView(APIView):
         data = serializer.validated_data
         user = User.objects.create_user(
             email=data["email"], password=data["password"],
-            full_name=data.get("full_name", ""), is_active=False,
+            full_name=data.get("full_name", ""), is_active=True,
         )
-        code = _generate_otp(user.email, "register")
-        response = {"detail": "Code de vérification envoyé."}
-        if settings.DEBUG and request.data.get("debug"):
-            response["debug_otp_code"] = code  # pratique en développement/démo
-        return Response(response, status=status.HTTP_201_CREATED)
-
-
-class VerifyOtpView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        serializer = VerifyOtpSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data["email"]
-        code = serializer.validated_data["otp_code"]
-
-        otp = (
-            OneTimeCode.objects.filter(email=email, code=code, purpose="register", used=False)
-            .order_by("-created_date")
-            .first()
-        )
-        if not otp or timezone.now() - otp.created_date > timedelta(minutes=OTP_VALIDITY_MINUTES):
-            return Response({"detail": "Code invalide ou expiré."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return Response({"detail": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
-
-        otp.used = True
-        otp.save(update_fields=["used"])
-        user.is_active = True
-        user.save(update_fields=["is_active"])
-
-        return Response(_tokens_for(user), status=status.HTTP_200_OK)
-
-
-class ResendOtpView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        email = request.data.get("email")
-        if not email:
-            return Response({"detail": "Email requis."}, status=status.HTTP_400_BAD_REQUEST)
-        _generate_otp(email, "register")
-        return Response({"detail": "Code renvoyé."})
+        tokens = _tokens_for(user)
+        tokens["user"] = UserSerializer(user).data
+        return Response(tokens, status=status.HTTP_201_CREATED)
 
 
 class LoginView(APIView):
@@ -148,51 +81,6 @@ class MeView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
-
-
-class ForgotPasswordView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        serializer = ForgotPasswordSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data["email"]
-        response = {"detail": "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé."}
-        if User.objects.filter(email__iexact=email).exists():
-            code = _generate_otp(email, "reset_password")
-            if settings.DEBUG and request.data.get("debug"):
-                response["debug_reset_token"] = code
-        return Response(response)
-
-
-class ResetPasswordView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        serializer = ResetPasswordSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
-
-        otp = (
-            OneTimeCode.objects.filter(
-                email=data["email"], code=data["reset_token"], purpose="reset_password", used=False
-            )
-            .order_by("-created_date")
-            .first()
-        )
-        if not otp or timezone.now() - otp.created_date > timedelta(minutes=OTP_VALIDITY_MINUTES):
-            return Response({"detail": "Lien invalide ou expiré."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            user = User.objects.get(email=data["email"])
-        except User.DoesNotExist:
-            return Response({"detail": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
-
-        user.set_password(data["new_password"])
-        user.save(update_fields=["password"])
-        otp.used = True
-        otp.save(update_fields=["used"])
-        return Response({"detail": "Mot de passe réinitialisé avec succès."})
 
 
 class LogoutView(APIView):
