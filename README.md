@@ -48,6 +48,47 @@ OPENWEATHER_API_KEY=ta_cle_openweathermap
 
 ## Démarrage rapide
 
+### Déploiement en ligne (GitHub Pages + Render)
+
+Le dépôt contient un workflow GitHub Actions pour publier le frontend sur
+GitHub Pages et un Blueprint Render (`render.yaml`) pour créer l'API Django
+et sa base PostgreSQL. GitHub Pages ne pouvant pas exécuter Django, les deux
+services doivent être déployés.
+
+1. Sur Render, crée un **Blueprint** à partir de ce dépôt et confirme la
+   création de `agrivigil-ai-api` et `agrivigil-ai-db`. Le Blueprint démarre
+   avec les offres gratuites : le serveur peut s'endormir après une période
+   d'inactivité et la base gratuite est temporaire (30 jours). Pour une
+   utilisation durable, choisis une base PostgreSQL payante et configure des
+   sauvegardes.
+2. Pour recevoir les codes d'inscription et de réinitialisation, crée un
+   compte [Resend](https://resend.com/), vérifie un domaine expéditeur et
+   configure dans **Render → agrivigil-ai-api → Environment** :
+   `EMAIL_HOST_PASSWORD` (clé SMTP Resend) et `DEFAULT_FROM_EMAIL` (adresse
+   vérifiée, par exemple `AgriVigil AI <noreply@ton-domaine.com>`). Ne partage
+   jamais ces valeurs dans le dépôt. Sans ces deux variables, l'inscription
+   et la réinitialisation de mot de passe ne peuvent pas envoyer de code.
+3. Après le premier déploiement Render, copie l'URL publique de l'API, par
+   exemple `https://agrivigil-ai-api.onrender.com`. Dans GitHub, ouvre
+   **Settings → Secrets and variables → Actions → Variables**, ajoute
+   `VITE_API_BASE_URL` avec cette URL (sans `/api`).
+4. Dans GitHub, ouvre **Settings → Pages**, choisis **GitHub Actions** comme
+   source, puis lance le workflow **Deploy frontend to GitHub Pages** depuis
+   l'onglet **Actions**. Les prochaines modifications du frontend publiées
+   sur `main` déclencheront automatiquement le déploiement.
+
+L'application sera disponible à l'adresse
+`https://azizcompaore.github.io/agrivigil-ai/`. Les routes utilisent des
+fragments (`/#/login`) pour fonctionner sur GitHub Pages, et les appels
+frontend utilisent l'API Render. Après avoir renseigné `VITE_API_BASE_URL`,
+relance le workflow pour intégrer l'adresse de l'API au frontend.
+
+Les services optionnels doivent aussi être configurés dans Render pour
+activer leurs fonctions : `GEMINI_API_KEY` (diagnostic IA),
+`OPENWEATHER_API_KEY` (météo), et les identifiants
+`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+pour conserver les images de scans malgré les redémarrages du serveur.
+
 ### Lancement officiel pour le jury (une seule commande)
 
 Prérequis : Docker Desktop installé et lancé.
@@ -134,11 +175,11 @@ Channels plus tard sans changer l'interface des composants.
 
 ## Limitations connues du MVP
 
-- Base de données SQLite (suffisant pour la démo ; passer à PostgreSQL/PostGIS
-  est prévu dans `settings.py`, commenté et prêt à activer).
-- Pas d'envoi réel d'email/SMS pour les codes OTP : ils sont affichés dans la
-  console du serveur Django (`[OTP DEMO] ...`). Pratique pour tester sans
-  configurer Africa's Talking dans l'immédiat.
+- SQLite en développement local ; le Blueprint Render utilise PostgreSQL
+  en production.
+- En développement, les codes OTP sont affichés dans la console Django.
+  En production, un SMTP Resend vérifié est requis pour envoyer les codes
+  d'inscription et de réinitialisation (voir la configuration de déploiement).
 - La connexion Google (bouton présent dans l'UI) n'est pas branchée — elle
   affiche un message clair plutôt que de planter.
 - Le diagnostic IA (Gemini) et la météo (OpenWeatherMap) nécessitent tes

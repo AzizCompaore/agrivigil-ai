@@ -5,8 +5,10 @@
 // qu'avant (auth / entities / integrations), pour ne pas avoir à réécrire
 // chaque écran : seule l'implémentation change, l'interface reste stable.
 
-const configuredBase = (import.meta.env.VITE_API_BASE_URL || 'https://agrivigil-ai-production.up.railway.app').trim().replace(/\/$/, '');
-const API_BASE_URL = configuredBase.endsWith('/api') ? configuredBase : `${configuredBase}/api`;
+const configuredBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '');
+const API_BASE_URL = configuredBase
+  ? configuredBase.endsWith('/api') ? configuredBase : `${configuredBase}/api`
+  : import.meta.env.DEV ? 'http://localhost:8000/api' : null;
 
 const ACCESS_KEY = 'agrivigil_access_token';
 const REFRESH_KEY = 'agrivigil_refresh_token';
@@ -49,6 +51,10 @@ async function refreshAccessToken() {
 // `body` peut être un objet JSON classique OU une instance de FormData
 // (utilisée automatiquement dès qu'un fichier est présent, ex: images).
 async function request(path, { method = 'GET', body, isForm = false, retry = true } = {}) {
+  if (!API_BASE_URL) {
+    throw new Error("L'API n'est pas configurée. Définissez la variable VITE_API_BASE_URL pour ce déploiement.");
+  }
+
   const headers = {};
   const token = getAccessToken();
   const isPublicAuthPath =
@@ -185,11 +191,11 @@ const auth = {
 
   logout(redirectUrl) {
     clearTokens();
-    if (redirectUrl) window.location.href = '/login';
+    if (redirectUrl) window.location.assign(`${import.meta.env.BASE_URL}#/login`);
   },
 
   redirectToLogin() {
-    window.location.href = '/login';
+    window.location.assign(`${import.meta.env.BASE_URL}#/login`);
   },
 };
 

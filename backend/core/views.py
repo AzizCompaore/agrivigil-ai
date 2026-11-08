@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 from django.conf import settings
 from django.contrib.auth import authenticate
+from django.core.mail import send_mail
 from django.db import transaction
 from django.utils import timezone
 
@@ -39,9 +40,17 @@ def _tokens_for(user):
 def _generate_otp(email, purpose):
     code = f"{random.randint(0, 999999):06d}"
     OneTimeCode.objects.create(email=email, code=code, purpose=purpose)
-    # MVP : pas d'envoi réel d'email/SMS. On journalise pour la démo.
-    # -> Brancher ici Africa's Talking (SMS) ou un service d'email en production.
-    print(f"[OTP DEMO] {purpose} pour {email} : {code} (valide {OTP_VALIDITY_MINUTES} min)")
+    if settings.DEBUG:
+        print(f"[OTP DEMO] {purpose} pour {email} : {code} (valide {OTP_VALIDITY_MINUTES} min)")
+    else:
+        action = "la création de votre compte" if purpose == "register" else "la réinitialisation de votre mot de passe"
+        send_mail(
+            "Votre code de vérification AgriVigil AI",
+            f"Utilisez le code {code} pour {action}. Il est valide pendant {OTP_VALIDITY_MINUTES} minutes.",
+            settings.DEFAULT_FROM_EMAIL,
+            [email],
+            fail_silently=False,
+        )
     return code
 
 
@@ -62,7 +71,7 @@ class RegisterView(APIView):
         )
         code = _generate_otp(user.email, "register")
         response = {"detail": "Code de vérification envoyé."}
-        if request.data.get("debug"):
+        if settings.DEBUG and request.data.get("debug"):
             response["debug_otp_code"] = code  # pratique en développement/démo
         return Response(response, status=status.HTTP_201_CREATED)
 
@@ -151,7 +160,7 @@ class ForgotPasswordView(APIView):
         response = {"detail": "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé."}
         if User.objects.filter(email__iexact=email).exists():
             code = _generate_otp(email, "reset_password")
-            if request.data.get("debug"):
+            if settings.DEBUG and request.data.get("debug"):
                 response["debug_reset_token"] = code
         return Response(response)
 

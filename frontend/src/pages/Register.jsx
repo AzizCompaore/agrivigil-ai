@@ -6,10 +6,11 @@ import { Leaf, Loader2, Mail, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 export default function Register() {
+  const navigate = useNavigate();
   const [step, setStep] = useState('register'); // register | otp
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,7 +42,7 @@ export default function Register() {
     try {
       const { access_token } = await db.auth.verifyOtp({ email, otpCode: otp });
       db.auth.setToken(access_token);
-      window.location.href = '/';
+      navigate('/');
     } catch (err) {
       setError(err.message || 'Code invalide');
       setLoading(false);

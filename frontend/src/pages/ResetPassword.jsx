@@ -6,9 +6,12 @@ import { Leaf, Loader2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function ResetPassword() {
-  const urlParams = new URLSearchParams(window.location.search);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const urlParams = new URLSearchParams(location.search);
   const token = urlParams.get('token');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -22,7 +25,7 @@ export default function ResetPassword() {
     setLoading(true);
     try {
       await db.auth.resetPassword({ resetToken: token, newPassword: password });
-      window.location.href = '/login';
+      navigate('/login');
     } catch (err) {
       setError(err.message || 'Erreur lors de la réinitialisation');
       setLoading(false);
