@@ -61,11 +61,16 @@ services doivent être déployés.
    d'inactivité et la base gratuite est temporaire (30 jours). Pour une
    utilisation durable, choisis une base PostgreSQL payante et configure des
    sauvegardes.
-2. Après le premier déploiement Render, copie l'URL publique de l'API, par
+2. Pour activer la météo, crée une clé sur
+   [OpenWeatherMap](https://openweathermap.org/api), puis ajoute-la dans
+   **agrivigil-ai-api → Environment** sur Render avec le nom
+   `OPENWEATHER_API_KEY`. Enregistre les changements et redéploie l'API.
+   Garde cette clé dans Render : ne la publie pas sur GitHub.
+3. Après le premier déploiement Render, copie l'URL publique de l'API, par
    exemple `https://agrivigil-ai-api.onrender.com`. Dans GitHub, ouvre
    **Settings → Secrets and variables → Actions → Variables**, ajoute
    `VITE_API_BASE_URL` avec cette URL (sans `/api`).
-3. Dans GitHub, ouvre **Settings → Pages**, choisis **GitHub Actions** comme
+4. Dans GitHub, ouvre **Settings → Pages**, choisis **GitHub Actions** comme
    source, puis lance le workflow **Deploy frontend to GitHub Pages** depuis
    l'onglet **Actions**. Les prochaines modifications du frontend publiées
    sur `main` déclencheront automatiquement le déploiement.

@@ -76,6 +76,7 @@ export default function Meteo() {
   const [city, setCity] = useState(IVORIAN_CITIES[0]);
   const [weather, setWeather] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchWeather(city);
@@ -83,11 +84,17 @@ export default function Meteo() {
 
   const fetchWeather = async (selectedCity) => {
     setLoading(true);
+    setError(null);
     try {
       const result = await db.integrations.Core.GetWeather(selectedCity.name);
       setWeather(result);
     } catch (err) {
       setWeather(null);
+      setError(
+        err.message?.includes('OPENWEATHER_API_KEY')
+          ? "La météo n'est pas configurée. Ajoutez OPENWEATHER_API_KEY aux variables d'environnement de agrivigil-ai-api sur Render."
+          : err.message || 'Impossible de charger la météo. Réessayez dans quelques instants.'
+      );
     } finally {
       setLoading(false);
     }
@@ -143,7 +150,7 @@ export default function Meteo() {
         <div className="flex items-center justify-center py-16">
           <Loader2 className="w-6 h-6 text-[#12523A] animate-spin" />
         </div>
-      ) : weather && (
+      ) : weather ? (
         <>
           {/* Current weather */}
           <div className="card-soft rounded-3xl p-5 mb-4">
@@ -242,6 +249,18 @@ export default function Meteo() {
             <p className="text-sm text-[#10221A] font-body leading-relaxed">{season.advice}</p>
           </div>
         </>
+      ) : (
+        <div role="alert" className="card-soft rounded-3xl p-5 text-center">
+          <AlertTriangle className="w-7 h-7 text-[#B4740E] mx-auto mb-2" />
+          <p className="text-sm text-[#10221A] font-body">{error}</p>
+          <button
+            type="button"
+            onClick={() => fetchWeather(city)}
+            className="mt-3 rounded-xl bg-[#12523A] px-4 py-2 text-sm font-semibold text-white"
+          >
+            Réessayer
+          </button>
+        </div>
       )}
       </div>
     </div>

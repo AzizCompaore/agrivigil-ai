@@ -30,3 +30,5 @@ services:
         fromDatabase:
           name: agrivigil-ai-db
           property: connectionString
+      - key: OPENWEATHER_API_KEY
+        sync: false
