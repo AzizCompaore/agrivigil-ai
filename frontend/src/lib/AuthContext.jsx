@@ -30,12 +30,22 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setIsAuthenticated(false);
       if (error.status === 401 || error.status === 403) {
+        db.auth.logout();
         setAuthError({ type: 'auth_required', message: 'Authentification requise' });
       }
     } finally {
       setIsLoadingAuth(false);
       setAuthChecked(true);
     }
+  };
+
+  const login = async (email, password) => {
+    const currentUser = await db.auth.loginViaEmailPassword(email, password);
+    setUser(currentUser);
+    setIsAuthenticated(true);
+    setAuthError(null);
+    setAuthChecked(true);
+    return currentUser;
   };
 
   useEffect(() => {
@@ -62,6 +72,7 @@ export const AuthProvider = ({ children }) => {
         isLoadingPublicSettings: false,
         authError,
         authChecked,
+        login,
         logout,
         navigateToLogin,
         checkUserAuth,
